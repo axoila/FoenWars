@@ -6,9 +6,43 @@ function init() {
 }
 
 function Game(){
+    this.mode = 0; //0 is story | 1 in running | 2 is paused
+    this.enemies = [];
     this.init = function() {
         if(this.setupCanvases()){
             this.background = new Background();
+            return true;
+        }
+        return false;
+    }
+
+    this.tick = function(delta){
+        switch(this.mode){
+            case 0:
+                this.intro();
+                break;
+        }
+    }
+
+    this.intro = function(){
+        if(this.page == undefined)
+            this.page = 0;
+        switch(this.page){
+            case 0:
+                this.background.draw(imageRepository.story1);
+                break;
+            case 1:
+                this.background.draw(imageRepository.story2);
+                break;
+            case 2:
+                this.background.draw(imageRepository.story3);
+                break;
+            default:
+                this.mode = 1;
+        }
+        if(KEY_STATUS.lmb){
+            this.page++;
+            KEY_STATUS.lmb = false;
         }
     }
 
@@ -45,12 +79,38 @@ function Background(){
     this.context.drawImage(this.image, 0, 0);
 	this.draw = function(newImage){
         if(this.image != newImage){
+            console.log(newImage);
             this.image = newImage;
-			this.context.drawImage(imageRepository.background, 0, 0);
+			this.context.drawImage(this.image, 0, 0);
 		}
 	}
 }
 Background.prototype = new Drawable();
+
+var lastUpdate = Date.now();
+function animate(){
+	now = Date.now();
+	delta = (now - lastUpdate)/1000;
+	delta = Math.min(delta, 0.1);
+	//console.log(delta);
+	lastUpdate = now;
+
+    game.tick();
+
+	requestAnimFrame(animate);
+}
+
+window.requestAnimFrame = (function(){ //this makes the frames..... somehow
+	return  window.requestAnimationFrame   ||
+			window.webkitRequestAnimationFrame ||
+			window.mozRequestAnimationFrame    ||
+			window.oRequestAnimationFrame      ||
+			window.msRequestAnimationFrame     ||
+			function(/* function */ callback, /* DOMElement */ element){
+				window.setTimeout(callback, 1000 / 60);
+			};
+})();
+
 
 function Drawable(){
 	this.init = function(x, y, width, height) {
@@ -68,10 +128,16 @@ function Drawable(){
 
 var imageRepository = new function() {
     this.background = new Image();
-    this.background.onload = function() {
+    this.story1 = new Image();
+    this.story2 = new Image();
+    this.story3 = new Image();
+    this.story3.onload = function() {
 		window.init();
 	}
     this.background.src = "imgs/background_programmer-art.png";
+    this.story1.src = "imgs/backgroundstory1.png";
+    this.story2.src = "imgs/backgroundstory2.png";
+    this.story3.src = "imgs/backgroundstory3.png";
 }
 
 //ALL THINGS BELOW ARE MAGIC
@@ -87,6 +153,8 @@ KEY_CODES = {
   78: 'n',
   89: 'y',
   82: 'r',
+  0: 'lmb',
+  2: 'rmb',
 }
 /* Creates the array to hold the KEY_CODES and sets all their values
 // to false. Checking true/flase is the quickest way to check status
@@ -112,10 +180,23 @@ document.onkeydown = function(e) {
 	 (fired when * any key on the keyboard is released). When a key
 	 is released, * it sets teh appropriate direction to false to let
 	 us know which * key it was. */
- document.onkeyup = function(e) {
+document.onkeyup = function(e) {
 	 var keyCode = (e.keyCode) ? e.keyCode : e.charCode;
 	 if (KEY_CODES[keyCode]) {
-			 e.preventDefault();
-			 KEY_STATUS[KEY_CODES[keyCode]] = false;
-		 }
+		 e.preventDefault();
+		 KEY_STATUS[KEY_CODES[keyCode]] = false;
+	 }
+}
+
+document.onmousedown = function(e){
+    if (KEY_CODES[e.button]) {
+        e.preventDefault();
+        KEY_STATUS[KEY_CODES[e.button]] = true;
+    }
+}
+document.onmouseup = function(e){
+    if (KEY_CODES[e.button]) {
+        e.preventDefault();
+        KEY_STATUS[KEY_CODES[e.button]] = false;
+    }
 }
