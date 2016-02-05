@@ -65,6 +65,7 @@ function Game(){
 		if(this.enemySpawnCounter>=1/this.enemySpawnFrequency){
 			this.enemySpawnCounter =0;
 			var newEnemy = new Enemy();
+			newEnemy.images = imageRepository.enemy1;
 			this.enemies.push(newEnemy);
 			console.log("spawned enemy");
 		}
@@ -116,8 +117,10 @@ function Enemy() {
 	this.height = 256;
 	this.moveSpeed = 30; //speed at whick the enemy walks towards you (in px/sec)
 	this.animCycle = 0; //used for decaying and walkcycle
+	this.animFreqency = 2.5;//how often the image switches in fps
 	this.alive = true; //is the enemy alive?
-    this.image = imageRepository.no;
+    this.images = [];
+	this.image = imageRepository.no;
 	this.clear = function() {
 		this.context.clearRect(this.x, this.y, this.width+1, this.height);
 	};
@@ -125,6 +128,22 @@ function Enemy() {
         this.context.drawImage(this.image, this.x, this.y, this.width, this.height );
 	};
 	this.update = function(delta) {
+		/*init animcounter (timing for the switching around)
+		and imageIndex (the index in the index array)*/
+		if(this.animCounter == undefined)
+			this.animCounter = 0;
+		if(this.imageIndex == undefined)
+			this.imageIndex = 0;
+		this.animCounter += delta;
+		if(this.animCounter>=1/this.animFreqency){ //go to next image when tick
+			this.imageIndex++;
+			this.animCounter = 0;
+		}
+		if(this.imageIndex>=this.images.length) //reset index when it gets over the top
+			this.imageIndex = 0;
+		if(this.images.length > 0) //set new image - if the image list is not empty
+			this.image = this.images[this.imageIndex];
+
 		this.x -= Math.min(this.moveSpeed * delta, 1);
 		//console.log(this.x+" | "+this.y);
 	};
@@ -191,6 +210,7 @@ function Drawable(){
 var imageRepository = new function() {
     this.background = new Image();
 	this.no = new Image();
+	this.enemy1 = [new Image(), new Image(), new Image(), new Image()];
     this.story1 = new Image();
     this.story2 = new Image();
     this.story3 = new Image();
@@ -199,6 +219,10 @@ var imageRepository = new function() {
 	}
     this.background.src = "imgs/background_programmer-art.png";
 	this.no.src = "imgs/NO.png";
+	this.enemy1[0].src = "imgs/enemyWalk1.png";
+	this.enemy1[1].src = "imgs/enemyWalk2.png";
+	this.enemy1[2].src = "imgs/enemyWalk3.png";
+	this.enemy1[3].src = "imgs/enemyWalk4.png";
     this.story1.src = "imgs/backgroundstory1.png";
     this.story2.src = "imgs/backgroundstory2.png";
     this.story3.src = "imgs/backgroundstory3.png";
@@ -209,7 +233,7 @@ var imageRepository = new function() {
 
 // The keycodes that will be mapped when a user presses a button.
 KEY_CODES = {
-  32: 'lmb',
+  32: 'lmb', //spacebar
   38: 'up',
   37: 'left',
   40: 'down',
@@ -218,6 +242,7 @@ KEY_CODES = {
   65: 'left',
   83: 'down',
   68: 'right',
+  27: 'esc',
   0: 'lmb',
   2: 'rmb',
 }
