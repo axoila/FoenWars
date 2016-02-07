@@ -7,6 +7,7 @@ function init() {
 
 function Game(){
     this.mode = 0; // 0 is intro // 1 is menu // 2 is play // 3 is paused // 4 is init play
+	this.stuntime = 2;
     this.enemies = [];
     this.init = function() {
         if(this.setupCanvases()){
@@ -61,35 +62,46 @@ function Game(){
 	}
 
  	this.play = function(delta){
+		if(this.stunned == undefined)
+			this.stunned = 0;
+		//enemy spawning
 		this.enemySpawnCounter+=delta;
 		if(this.enemySpawnCounter>=1/this.enemySpawnFrequency){
 			this.enemySpawnCounter =0;
 			var newEnemy = new Enemy();
 			newEnemy.walkImages = imageRepository.enemy1;
+			newEnemy.dieImages = imageRepository.enemy1death;
 			newEnemy.init();
 			this.enemies.push(newEnemy);
 			console.log("spawned enemy");
 		}
 
 		//first calculate the new enemy position without redrawing anything
-		{//stuff for the arrows
-		var button = -1;
-		if(KEY_STATUS.up)
-			button=0;
-		if(KEY_STATUS.right)
-			button=1;
-		if(KEY_STATUS.down)
-			button=2;
-		if(KEY_STATUS.left)
-			button=3;
-		var combo = 0;
-		this.enemies.forEach(function(enemy){
-			while(enemy.arrows[0] != undefined && button == enemy.arrows[0].direction){
-				enemy.arrows[enemy.arrows.length-1].clear(enemy.arrows.length-1);
-				enemy.arrows.shift();
-				combo++;
+		this.stunned -= delta;
+		if(this.stunned<=0){//stuff for the arrows
+			var button = -1;
+			if(KEY_STATUS.up)
+				button=0;
+			if(KEY_STATUS.right)
+				button=1;
+			if(KEY_STATUS.down)
+				button=2;
+			if(KEY_STATUS.left)
+				button=3;
+			var combo = 0;
+			this.enemies.forEach(function(enemy){
+				if(enemy.arrows[0] != undefined && button == enemy.arrows[0].direction){
+					enemy.arrows[enemy.arrows.length-1].clear(enemy.arrows.length-1);
+					enemy.arrows.shift();
+					combo++;
+					KEY_STATUS.up = KEY_STATUS.right = KEY_STATUS.down = KEY_STATUS.left = false;
+				}
+			});
+			if(combo == 0 && button != -1){
+				this.stunned = this.stuntime;
+				console.log("wrong button, stunning performance!")
 			}
-		});}
+		}
 		this.enemies.forEach(function(enemy){
 			enemy.update(delta);
 		});
@@ -131,6 +143,7 @@ function Game(){
 }
 
 function Enemy() {
+	this.speed = 1;
 	this.x = 1300;
 	this.y = 400;
 	this.width = 128;
@@ -138,8 +151,10 @@ function Enemy() {
 	this.moveSpeed = 30; //speed at whick the enemy walks towards you (in px/sec)
 	this.animCycle = 0; //used for decaying and walkcycle
 	this.animFreqency = 2.5;//how often the image switches in fps
+	this.animDeathFreqency = 1;//how often the image switches in fps
 	this.alive = true; //is the enemy alive?
     this.walkImages = [];
+	this.dieImages = [];
 	this.image = imageRepository.no;
 
 	this.arrowAmount = 10;
@@ -166,7 +181,8 @@ function Enemy() {
 		if(this.imageIndex == undefined)
 			this.imageIndex = 0;
 		this.animCounter += delta;
-		if(this.animCounter>=1/this.animFreqency){ //go to next image when tick
+
+		if(this.animCounter>=1/(this.animFreqency*this.speed) && this.alive){ //go to next image when tick
 			this.imageIndex++;
 			this.animCounter = 0;
 			if(this.imageIndex>=this.walkImages.length) //reset index when it gets over the top
@@ -174,9 +190,28 @@ function Enemy() {
 			if(this.walkImages.length > 0) //set new image - if the image list is not empty
 				this.image = this.walkImages[this.imageIndex];
 		}
+		if(this.animCounter>=1/this.animDeathFreqency && !this.alive){ //go to next image when tick
+			this.imageIndex++;
+			this.animCounter = 0;
+			if(this.imageIndex>=this.dieImages.length){ //when the death animation is over the enemy gets deleted
+				game.enemies.splice(game.enemies.indexOf(this), 1);
+				this.clear();
+				console.log(this.dieImages);
+			}
+			if(this.dieImages.length > 0) //set new image - if the image list is not empty
+				this.image = this.dieImages[this.imageIndex];
+		}
+		if(this.alive && this.arrows.length == 0){
+			this.alive = false;
+			this.animCycle = 0;
+			this.imageIndex = 0;
+			this.image = this.dieImages[this.imageIndex];
+			this.animCounter = 9999;
+		}
 
 		//MOVEMENT
-		this.x -= Math.min(this.moveSpeed * delta, 1);
+		if(this.alive)
+			this.x -= Math.min(this.moveSpeed * delta, 1);
 	};
 	this.init = function() {
 		for(i=0;i<this.arrowAmount;i++){
@@ -256,28 +291,18 @@ window.requestAnimFrame = (function(){ //this makes the frames..... somehow
 
 
 function Drawable(){
-	this.init = function(x, y, width, height) {
-		this.x = x;
-		this.y = y;
-		this.width = width;
-		this.height = height;
-	}
 	this.setContext = function(context){
 		this.context = context;
 		this.canvasWidth = context.width;
 		this.canvasHeight = context.height;
 	}
-	this.speed = 0;
-	this.canvasWidth = 0;
-	this.canvasHeight = 0;
-
-	this.draw = function(){};
 }
 
 var imageRepository = new function() {
     this.background = new Image();
 	this.no = new Image();
 	this.enemy1 = [new Image(), new Image(), new Image(), new Image()];
+	this.enemy1death = [new Image(), new Image(), new Image()];
 	this.arrows = [new Image(), new Image(), new Image(), new Image()];
     this.story1 = new Image();
     this.story2 = new Image();
@@ -291,6 +316,9 @@ var imageRepository = new function() {
 	this.enemy1[1].src = "imgs/enemyWalk2.png";
 	this.enemy1[2].src = "imgs/enemyWalk3.png";
 	this.enemy1[3].src = "imgs/enemyWalk4.png";
+	this.enemy1death[0].src = "imgs/enemyDeath1.png";
+	this.enemy1death[1].src = "imgs/enemyDeath2.png";
+	this.enemy1death[2].src = "imgs/enemyDeath3.png";
 	this.arrows[0].src = "imgs/upArrow.png";
 	this.arrows[1].src = "imgs/rightArrow.png";
 	this.arrows[2].src = "imgs/downArrow.png";
