@@ -60,17 +60,36 @@ function Game(){
 		this.background.draw(imageRepository.background);
 	}
 
-	this.play = function(delta){
+ 	this.play = function(delta){
 		this.enemySpawnCounter+=delta;
 		if(this.enemySpawnCounter>=1/this.enemySpawnFrequency){
 			this.enemySpawnCounter =0;
 			var newEnemy = new Enemy();
-			newEnemy.images = imageRepository.enemy1;
+			newEnemy.walkImages = imageRepository.enemy1;
+			newEnemy.init();
 			this.enemies.push(newEnemy);
 			console.log("spawned enemy");
 		}
 
 		//first calculate the new enemy position without redrawing anything
+		{//stuff for the arrows
+		var button = -1;
+		if(KEY_STATUS.up)
+			button=0;
+		if(KEY_STATUS.right)
+			button=1;
+		if(KEY_STATUS.down)
+			button=2;
+		if(KEY_STATUS.left)
+			button=3;
+		var combo = 0;
+		this.enemies.forEach(function(enemy){
+			while(enemy.arrows[0] != undefined && button == enemy.arrows[0].direction){
+				enemy.arrows[enemy.arrows.length-1].clear(enemy.arrows.length-1);
+				enemy.arrows.shift();
+				combo++;
+			}
+		});}
 		this.enemies.forEach(function(enemy){
 			enemy.update(delta);
 		});
@@ -98,6 +117,7 @@ function Game(){
 
             Background.prototype.setContext(this.bgContext);
 			Enemy.prototype.setContext(this.enemyContext);
+			Arrow.prototype.setContext(this.enemyContext);
 
             return true;
         } else {
@@ -111,7 +131,7 @@ function Game(){
 }
 
 function Enemy() {
-	this.x = 1280;
+	this.x = 1300;
 	this.y = 400;
 	this.width = 128;
 	this.height = 256;
@@ -119,15 +139,26 @@ function Enemy() {
 	this.animCycle = 0; //used for decaying and walkcycle
 	this.animFreqency = 2.5;//how often the image switches in fps
 	this.alive = true; //is the enemy alive?
-    this.images = [];
+    this.walkImages = [];
 	this.image = imageRepository.no;
+
+	this.arrowAmount = 10;
+	this.arrows = [];
+
 	this.clear = function() {
 		this.context.clearRect(this.x, this.y, this.width+1, this.height);
+		for(i=0;i<this.arrows.length;i++){
+			this.arrows[i].clear(i);
+		}
 	};
 	this.draw = function() {
         this.context.drawImage(this.image, this.x, this.y, this.width, this.height );
+		for(i=0;i<this.arrows.length;i++){
+			this.arrows[i].draw(i);
+		}
 	};
 	this.update = function(delta) {
+		//ANIMATING
 		/*init animcounter (timing for the switching around)
 		and imageIndex (the index in the index array)*/
 		if(this.animCounter == undefined)
@@ -138,17 +169,53 @@ function Enemy() {
 		if(this.animCounter>=1/this.animFreqency){ //go to next image when tick
 			this.imageIndex++;
 			this.animCounter = 0;
+			if(this.imageIndex>=this.walkImages.length) //reset index when it gets over the top
+				this.imageIndex = 0;
+			if(this.walkImages.length > 0) //set new image - if the image list is not empty
+				this.image = this.walkImages[this.imageIndex];
 		}
-		if(this.imageIndex>=this.images.length) //reset index when it gets over the top
-			this.imageIndex = 0;
-		if(this.images.length > 0) //set new image - if the image list is not empty
-			this.image = this.images[this.imageIndex];
 
+		//MOVEMENT
 		this.x -= Math.min(this.moveSpeed * delta, 1);
-		//console.log(this.x+" | "+this.y);
 	};
+	this.init = function() {
+		for(i=0;i<this.arrowAmount;i++){
+			var newArrow = new Arrow();
+			newArrow.enemy = this;
+			this.arrows.push(newArrow);
+		}
+	}
 }
 Enemy.prototype = new Drawable();
+
+function Arrow() {
+	this.width = 64;
+	this.height = 64;
+	this.enemy;
+	this.direction = Math.floor(Math.random()*4); //generate the arrow direction
+		//0 is up, 1 is right, 2 is down, 3 is left
+	switch(this.direction){
+		case 0:
+			this.image = imageRepository.upArrow;
+			break;
+		case 1:
+			this.image = imageRepository.rightArrow;
+			break;
+		case 2:
+			this.image = imageRepository.downArrow;
+			break;
+		case 3:
+			this.image = imageRepository.leftArrow;
+			break;
+	}
+	this.draw = function(index){
+		this.context.drawImage(imageRepository.arrows[this.direction], this.enemy.x+32, this.enemy.y-96-index*96, this.width, this.height );
+	}
+	this.clear = function(index){
+		this.context.clearRect(this.enemy.x+32, this.enemy.y-96-index*96, this.width+1, this.height );
+	}
+}
+Arrow.prototype = new Drawable();
 
 function Background(){
     this.image = imageRepository.background;
@@ -211,6 +278,7 @@ var imageRepository = new function() {
     this.background = new Image();
 	this.no = new Image();
 	this.enemy1 = [new Image(), new Image(), new Image(), new Image()];
+	this.arrows = [new Image(), new Image(), new Image(), new Image()];
     this.story1 = new Image();
     this.story2 = new Image();
     this.story3 = new Image();
@@ -223,7 +291,11 @@ var imageRepository = new function() {
 	this.enemy1[1].src = "imgs/enemyWalk2.png";
 	this.enemy1[2].src = "imgs/enemyWalk3.png";
 	this.enemy1[3].src = "imgs/enemyWalk4.png";
-    this.story1.src = "imgs/backgroundstory1.png";
+	this.arrows[0].src = "imgs/upArrow.png";
+	this.arrows[1].src = "imgs/rightArrow.png";
+	this.arrows[2].src = "imgs/downArrow.png";
+	this.arrows[3].src = "imgs/leftArrow.png";
+	this.story1.src = "imgs/backgroundstory1.png";
     this.story2.src = "imgs/backgroundstory2.png";
     this.story3.src = "imgs/backgroundstory3.png";
 }
