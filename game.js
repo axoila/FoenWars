@@ -12,6 +12,7 @@ function Game(){
     this.init = function() {
         if(this.setupCanvases()){
             this.background = new Background();
+			this.stunDisplay = new StunScreen();
             return true;
         }
         return false;
@@ -97,10 +98,14 @@ function Game(){
 					KEY_STATUS.up = KEY_STATUS.right = KEY_STATUS.down = KEY_STATUS.left = false;
 				}
 			});
+			this.stunDisplay.clear();
 			if(combo == 0 && button != -1){
 				this.stunned = this.stuntime;
 				console.log("wrong button, stunning performance!")
+				this.stunDisplay.draw();
 			}
+		} else {
+
 		}
 		this.enemies.forEach(function(enemy){
 			enemy.update(delta);
@@ -120,17 +125,20 @@ function Game(){
 		this.enemyCanvas = document.getElementById('enemies');
 		this.playerCanvas = document.getElementById('player');
 		this.hudCanvas = document.getElementById('hud');
+		this.stunCanvas = document.getElementById('stun');
 
         if(this.bgCanvas.getContext){
             this.bgContext = this.bgCanvas.getContext('2d');
 			this.enemyContext = this.enemyCanvas.getContext('2d');
 			this.playerContext = this.playerCanvas.getContext('2d');
+			this.stunContext = this.stunCanvas.getContext('2d');
 			this.hudContext = this.hudCanvas.getContext('2d');
 
             Background.prototype.setContext(this.bgContext);
 			Enemy.prototype.setContext(this.enemyContext);
 			Arrow.prototype.setContext(this.enemyContext);
-
+			StunScreen.prototype.setContext(this.stunContext);
+			console.log(this.stunContext);
             return true;
         } else {
             return false;
@@ -254,7 +262,7 @@ Arrow.prototype = new Drawable();
 
 function Background(){
     this.image = imageRepository.background;
-    this.context.drawImage(this.image, 0, 0);
+    this.context.drawImage(this.image, 0, 0, this.context.width, this.context.height);
 	this.draw = function(newImage){
         if(this.image != newImage){
             //console.log(newImage);
@@ -264,6 +272,28 @@ function Background(){
 	}
 }
 Background.prototype = new Drawable();
+
+function StunScreen(){
+	this.active = false;
+    this.image = imageRepository.background;
+    //this.context.drawImage(this.image, 0, 0, this.context.width, this.context.height);
+	this.draw = function(){
+        if(!this.active){
+            //console.log(newImage);
+			this.active = true;
+			this.context.drawImage(imageRepository.stunned, 0, 0);
+			console.log("STUN"+this.context);
+		}
+	}
+	this.clear = function(){
+		if(this.active){
+			this.active = false;
+			this.context.clearRect(0, 0, 1280, 720);
+			console.log("UNSTUN");
+		}
+	}
+}
+StunScreen.prototype = new Drawable();
 
 var lastUpdate = Date.now();
 function animate(){
@@ -300,6 +330,7 @@ function Drawable(){
 
 var imageRepository = new function() {
     this.background = new Image();
+	this.stunned = new Image();
 	this.no = new Image();
 	this.enemy1 = [new Image(), new Image(), new Image(), new Image()];
 	this.enemy1death = [new Image(), new Image(), new Image()];
@@ -311,6 +342,7 @@ var imageRepository = new function() {
 		window.init();
 	}
     this.background.src = "imgs/background_programmer-art.png";
+	this.stunned.src = "imgs/stunned.png";
 	this.no.src = "imgs/NO.png";
 	this.enemy1[0].src = "imgs/enemyWalk1.png";
 	this.enemy1[1].src = "imgs/enemyWalk2.png";
@@ -327,7 +359,6 @@ var imageRepository = new function() {
     this.story2.src = "imgs/backgroundstory2.png";
     this.story3.src = "imgs/backgroundstory3.png";
 }
-
 
 //ALL THINGS BELOW ARE MAGIC
 
