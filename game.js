@@ -55,7 +55,7 @@ function Game(){
 
 	this.initPlay = function(){
 		this.mode = 2;
-		this.enemySpawnFrequency = 0.2;
+		this.enemySpawnFrequency = .5;
 		this.enemySpawnCounter = 0;
 		this.enemies = [];
 		Enemy.prototype.context.clearRect(0, 0, Enemy.prototype.contextWidth, Enemy.prototype.contextHeight);
@@ -151,12 +151,12 @@ function Game(){
 }
 
 function Enemy() {
-	this.speed = 1;
+	this.speed = 2;
 	this.x = 1300;
 	this.y = 400;
 	this.width = 128;
 	this.height = 256;
-	this.moveSpeed = 30; //speed at whick the enemy walks towards you (in px/sec)
+	this.moveSpeed = 200; //speed at whick the enemy walks towards you (in px/sec)
 	this.animCycle = 0; //used for decaying and walkcycle
 	this.animFreqency = 2.5;//how often the image switches in fps
 	this.animDeathFreqency = 1;//how often the image switches in fps
@@ -165,7 +165,7 @@ function Enemy() {
 	this.dieImages = [];
 	this.image = imageRepository.no;
 
-	this.arrowAmount = 10;
+	this.arrowAmount = 3;
 	this.arrows = [];
 
 	this.clear = function() {
